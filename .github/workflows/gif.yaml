@@ -1,0 +1,86 @@
+name: Deploy to GH pages and Generate demo.gif file
+
+on: 
+  push: 
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  id-token: write
+  pages: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  deploy_to_gh_pages_and_generate_gif:
+    runs-on: ubuntu-latest
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # Upload entire repository
+          path: '.'
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      # Create a build folder
+      - name: Create a build folder
+        run: |
+          mkdir build
+
+      # Print the url of the github pages
+      - name: Print the url of the github pages
+        run: |
+          echo "The url of the github pages is ${{ steps.deployment.outputs.page_url }}"
+      
+      # Generate gif
+      - name: Website to file
+        uses: PabloLec/website-to-gif@2.1.3
+        with:
+          # This repos github pages url
+          url: "${{ steps.deployment.outputs.page_url }}src/index.html"
+          file_name: "demo"
+          # The name of the file to commit
+          save_path: "/build/"
+          # The browser to use
+          window_width: 800
+          window_height: 800
+
+          # the size of the gif
+          final_width: 800
+          final_height: 800
+
+          # The number of frames to capture (the more frames, the longer the gif)
+          number_of_frames: 500
+
+          # Do not scroll the page
+          no_scoll: true
+          
+          # The time between frames
+          time_per_frame: 100
+
+      # Push the output branch
+      - name: Push the output branch
+        uses: crazy-max/ghaction-github-pages@v3.1.0
+        with:
+          # The name of the branch where the gif will be pushed
+          target_branch: output
+          # The name of the file to commit
+          build_dir: build
+          # The name of the file to commit
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
